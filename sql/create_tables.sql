@@ -81,7 +81,13 @@ CREATE TABLE Preceptor (
     PRIMARY KEY (id_pessoa),
 
     FOREIGN KEY (id_pessoa)
-        REFERENCES Profissional(id_pessoa)
+        REFERENCES Profissional(id_pessoa),
+
+    CHECK (titulacao IN (
+        'Especialista',
+        'Mestre',
+        'Doutor'
+    ))
 );
 
 CREATE TABLE Unidade (
