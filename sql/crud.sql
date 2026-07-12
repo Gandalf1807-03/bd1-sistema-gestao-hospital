@@ -53,8 +53,7 @@ SELECT
     COUNT(A.id_atendimento)  AS total_atendimentos
 FROM Atendimento A
 JOIN Residente R      ON A.id_residente = R.id_pessoa
-JOIN Profissional Pr  ON R.id_pessoa = Pr.id_pessoa
-JOIN Pessoa Pe        ON Pr.id_pessoa = Pe.id_pessoa
+JOIN Pessoa Pe        ON R.id_pessoa = Pe.id_pessoa
 GROUP BY Pe.nome, R.id_pessoa
 ORDER BY tempo_medio_minutos DESC;
 --===============================================================================
