@@ -148,6 +148,14 @@ sudo apt update
 sudo apt install postgresql postgresql-contrib
 ```
 
+Baixar a extensão PostgreSQL por Chris Kolkman. Para conseguir se conectar: 
+
+```bash
+
+sudo -u postgres psql
+ALTER USER postgres PASSWORD '123';
+
+```
 ---
 
 ## Como Executar
@@ -156,31 +164,50 @@ sudo apt install postgresql postgresql-contrib
 ```bash
 sudo service postgresql start
 ```
+**2. Conectar a extensão (transforma os resultados do banco em tabelas visuais e organizadas)**
+Deve clicar no ícone de Banco de Dados (elefante) à esquerda do VS Code, clicar no botão "+" e preencher os campos: 
 
-**2. Criar o banco (apenas na primeira vez)**
+Host: localhost
+User: postgres
+Password: 123 (ou a senha que você definiu)
+Port: 5432
+
+**3. Criar o banco (apenas na primeira vez)**
 ```bash
 sudo -u postgres psql -c "CREATE DATABASE hospital;"
 ```
 
-**3. Entrar na pasta sql**
+**4. Entrar na pasta sql**
 ```bash
 cd sql
 ```
 
-**4. Criar as tabelas**
+**5. Criar as tabelas**
 ```bash
 sudo -u postgres psql -d hospital -f create_tables.sql
 ```
 
-**5. Inserir os dados de teste**
+**6. Inserir os dados de teste**
 ```bash
 sudo -u postgres psql -d hospital -f inserts.sql
 ```
 
-**6. Verificar se tudo foi criado**
+**7. Verificar se tudo foi criado**
 ```bash
 sudo -u postgres psql -d hospital -c "\dt"
 ```
+
+**8. Executar as consultas analíticas e operações CRUD pelo VS Code**
+
+Para rodar qualquer comando dentro dos arquivos crud.sql ou consultas.sql de forma visual:
+
+1. Abra o arquivo desejado no VS Code.
+
+2. Selecione (grife) com o mouse exatamente a query que deseja executar.
+
+3. Pressione as teclas Ctrl + Shift + E no seu teclado.
+
+O resultado formatado em colunas abrirá instantaneamente na aba da direita (PostgreSQL Results).
 
 ---
 
@@ -227,13 +254,4 @@ O `inserts.sql` popula o banco com:
 
 ---
 
-## Observação sobre a tabela Escala
-
-A tabela `Escala` armazena plantões **recorrentes** por dia da semana e turno,
-não por data específica. Por isso a consulta de plantões por unidade lista todos
-os plantões cadastrados sem filtro de mês — o modelo não possui coluna de data
-na escala, o que é intencional dado o enunciado.
-
----
-
-> Projeto desenvolvido para a disciplina de Banco de Dados 1 — UFPB.
+> Projeto desenvolvido para a disciplina de Banco de Dados I — UFPB.
