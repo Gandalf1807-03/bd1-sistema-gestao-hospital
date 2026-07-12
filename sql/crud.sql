@@ -21,7 +21,7 @@ WHERE P.id_procedimento IN (
     SELECT PR.id_procedimento FROM Procedimento_Realizado
     WHERE PR.id_atendimento = 2
 );
---join?
+
 --===============================================================================
 -- 4: Atualizar os dados de um paciente (convênio)
 
