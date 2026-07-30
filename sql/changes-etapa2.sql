@@ -197,3 +197,9 @@ VALUES
     (1, 'INSERT', 'jenni', NULL, '{"id_atendimento": 1, "duracao_minutos": 30}'::jsonb),
     (2, 'UPDATE', 'jenni', '{"duracao_minutos": 45}'::jsonb, '{"duracao_minutos": 50}'::jsonb),
     (3, 'DELETE', 'jenni', '{"id_atendimento": 3}'::jsonb, NULL);
+
+-- Verificar dados inseridos na tabela Internacao:
+SELECT * FROM Internacao;
+
+-- Verificar dados inseridos na tabela Auditoria_Atendimento:
+SELECT * FROM Auditoria_Atendimento;
