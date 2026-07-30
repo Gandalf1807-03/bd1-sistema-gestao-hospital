@@ -11,6 +11,7 @@ Sistema acadêmico de gestão hospitalar desenvolvido para o Hospital Universit�
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Modelo de Dados](#modelo-de-dados)
 - [Etapa 1 — Fundamentos](#etapa-1--fundamentos)
+- [Etapa 2 — Funcionalidades Avançadas](#etapa-2--funcionalidades-avançadas) 
 - [Instalação e Configuração](#instalação-e-configuração)
 - [Como Executar](#como-executar)
 - [Dados de Teste](#dados-de-teste)
@@ -26,6 +27,12 @@ O sistema gerencia o fluxo hospitalar completo:
 - Registro de atendimentos com vínculo entre paciente, residente e preceptor
 - Procedimentos realizados por atendimento, com métricas de tempo
 - Escalas de plantão por unidade, dia e turno
+- Auditoria de operações na tabela Atendimento
+- Controle de internações com entrada/saída de pacientes
+- Média real de tempo dos procedimentos
+- Triggers para validação e auditoria
+- Views para análises gerenciais
+- Stored Procedures para operações complexas
 
 ---
 
@@ -35,6 +42,7 @@ O sistema gerencia o fluxo hospitalar completo:
 |--------|-----------|
 | Banco de Dados | PostgreSQL 15+ |
 | Etapa 1 | SQL puro |
+| Etapa 2 | SQL avançado (Triggers, Views, Stored Procedures, JSONB) |
 
 ---
 
@@ -43,10 +51,14 @@ O sistema gerencia o fluxo hospitalar completo:
 ```
 bd1-sistema-gestao-hospital/
 ├── sql/
-│   ├── create_tables.sql   — criação de todas as tabelas com constraints
-│   ├── inserts.sql         — dados de teste
-│   ├── crud.sql            — operações CRUD em SQL puro
-│   └── consultas.sql       — consultas analíticas
+│   ├── create_tables.sql          — criação de todas as tabelas com constraints
+│   ├── inserts.sql                — dados de teste
+│   ├── crud.sql                   — operações CRUD em SQL puro
+│   ├── consultas.sql              — consultas analíticas
+│   ├── changes-etapa2.sql         — alterações estruturais para Etapa 2
+│   ├── triggers.sql               — triggers
+│   ├── views.sql                  — views
+│   └── procedures.sql             — stored procedures
 └── README.md
 ```
 
@@ -87,18 +99,30 @@ UNIDADE                 (id_unidade PK, nome, tipo, capacidade_leitos)
 ATENDIMENTO             (id_atendimento PK, data_hora, duracao_minutos,
                          id_paciente FK → PACIENTE,
                          id_residente FK → RESIDENTE,
-                         id_preceptor FK → PRECEPTOR)
+                         id_preceptor FK → PRECEPTOR,
+                         id_unidade FK → UNIDADE)
 
 PROCEDIMENTO            (id_procedimento PK, codigo UNIQUE, nome,
-                         tempo_medio_minutos, nivel_risco)
+                         tempo_medio_minutos, nivel_risco,
+                         media_tempo_procedimento)
 
 PROCEDIMENTO_REALIZADO  (id_atendimento FK, id_procedimento FK,
                          quantidade, tempo_real_minutos, observacao,
-                         is_faturado, PK(id_atendimento, id_procedimento))
+                         is_faturado, PK(id_atendimento, id_procedimento),
+                         data_hora_inicio)
 
 ESCALA                  (id_escala PK, id_unidade FK, dia_semana, turno,
                          id_residente FK, id_preceptor FK,
                          UNIQUE(id_unidade, dia_semana, turno, id_residente))
+
+INTERNACAO               (id_internacao PK, id_atendimento FK UNIQUE,
+                        data_hora_entrada, data_hora_saida,
+                        CHECK (saida >= entrada))
+
+AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
+                        operacao, usuario, data_hora,
+                        dados_antigos JSONB, dados_novos JSONB)
+
 ```
 
 ---
@@ -136,6 +160,37 @@ ESCALA                  (id_escala PK, id_unidade FK, dia_semana, turno,
 | Pacientes sem risco ALTO | Nunca realizaram procedimento de nível ALTO |
 
 ---
+## 🆕 Etapa 2 — Funcionalidades Avançadas
+
+### Alterações Estruturais (`changes-etapa2.sql`)
+
+| Alteração | Descrição |
+|-----------|-----------|
+| **id_unidade** no Atendimento | Relaciona atendimento à unidade onde ocorreu |
+| **data_hora_inicio** no Procedimento_Realizado | Registra início do procedimento com tempos personalizados por tipo |
+| **media_tempo_procedimento** no Procedimento | Média real de tempo calculada a partir dos atendimentos |
+| **Tabela Auditoria_Atendimento** | Histórico de operações (INSERT/UPDATE/DELETE) com JSONB |
+| **Tabela Internacao** | Controle de internações com entrada/saída de pacientes |
+
+### Views (`triggers_views_etapa2.sql`)
+
+| View | Descrição |
+|------|-----------|
+| `vw_pacientes_internados` | Pacientes atualmente internados (data_hora_saida IS NULL) |
+| `vw_residentes_sem_supervisor` | Residentes cujo preceptor não tem titulação de Doutor |
+| `vw_estatisticas_atendimentos_mensal` | Agregação por mês/unidade: total, média, procedimentos mais comuns |
+
+### Triggers
+
+| Trigger | Descrição |
+|---------|-----------|
+| `trg_check_sobreposicao_escala` | Impede mesmo residente em duas unidades no mesmo dia/turno |
+| `trg_audita_atendimento` | Registra todas as operações na tabela de auditoria |
+| `trg_atualiza_media_procedimentos` | Mantém a média real dos procedimentos atualizada |
+
+### Stored Procedures (em desenvolvimento) 
+
+### ORM (em desenvolvimento) 
 
 ## Instalação e Configuração
 
@@ -192,12 +247,29 @@ sudo -u postgres psql -d hospital -f create_tables.sql
 sudo -u postgres psql -d hospital -f inserts.sql
 ```
 
-**7. Verificar se tudo foi criado**
+**7. Aplicar alterações estruturais**
+```bash
+sudo -u postgres psql -d hospital -f changes-etapa2.sql
+```
+**8. Criar triggers**
+```bash
+sudo -u postgres psql -d hospital -f triggers.sql
+```
+**9. Criar views**
+```bash
+sudo -u postgres psql -d hospital -f views.sql
+```
+**10. Criar stored procedures**
+```bash
+sudo -u postgres psql -d hospital -f procedures.sql
+```
+
+**11. Verificar se tudo foi criado**
 ```bash
 sudo -u postgres psql -d hospital -c "\dt"
 ```
 
-**8. Executar as consultas analíticas e operações CRUD pelo VS Code**
+**12. Executar as consultas analíticas e operações CRUD pelo VS Code**
 
 Para rodar qualquer comando dentro dos arquivos crud.sql ou consultas.sql de forma visual:
 
@@ -221,6 +293,10 @@ sudo -u postgres psql -c "CREATE DATABASE hospital;"
 cd sql
 sudo -u postgres psql -d hospital -f create_tables.sql
 sudo -u postgres psql -d hospital -f inserts.sql
+sudo -u postgres psql -d hospital -f changes-etapa2.sql
+sudo -u postgres psql -d hospital -f triggers.sql
+sudo -u postgres psql -d hospital -f views.sql
+sudo -u postgres psql -d hospital -f procedures.sql
 ```
 
 ---
@@ -251,6 +327,11 @@ O `inserts.sql` popula o banco com:
 - `is_faturado = FALSE` no registro (atendimento 1, procedimento 1) — pode ser deletado no CRUD
 - `is_faturado = TRUE` no registro (atendimento 1, procedimento 2) — bloqueado contra deleção
 - Pacientes 1, 2 e 5 nunca realizaram procedimento de risco ALTO — retornam na consulta analítica
+- Atendimentos distribuídos entre as 4 unidades (Enfermaria, UTI, Pronto-Socorro, Ambulatório)
+- Horário de início dos procedimentos com tempos realistas por tipo
+- Média real de tempo calculada para cada procedimento
+- 3 internações registradas (2 pacientes internados, 1 com alta)
+- Dados de auditoria para testar histórico de operações
 
 ---
 
