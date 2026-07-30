@@ -1,7 +1,7 @@
 -- 1. Registrar atendimento completo
 
 CALL sp_registrar_atendimento_completo(
-    date_trunc('second', NOW()::TIMESTAMP),
+    '2026-05-11 10:00:00', -- Chegada do paciente
     30,     -- 30 min de duração
     1,      -- Paciente  com ID 1 (Thiago Sergio)
     15,     -- Residente com ID 15 (Iago Vitor)

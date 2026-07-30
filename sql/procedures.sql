@@ -61,3 +61,36 @@ BEGIN
     END;
 END;
 $$;
+
+-- 2. Calcular tempo médio de espera
+CREATE OR REPLACE PROCEDURE sp_calcular_tempo_medio_espera(
+    INOUT p_cursor REFCURSOR DEFAULT 'rs_tempo_espera'
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    OPEN p_cursor FOR
+        SELECT 
+            u.id_unidade,
+            u.nome AS nome_unidade,
+            -- Calcula a média em minutos entre a chegada (atendimento) 
+            -- e o primeiro procedimento (menor data_hora_inicio)
+            ROUND(
+                AVG(
+                    EXTRACT(EPOCH FROM (pr.primeiro_procedimento - a.data_hora)) / 60
+                )::NUMERIC, 2
+            ) AS tempo_medio_espera_minutos
+        FROM UNIDADE u
+        -- Relaciona o atendimento à unidade (através da escala)
+        INNER JOIN ESCALA e ON u.id_unidade = e.id_unidade
+        INNER JOIN ATENDIMENTO a ON a.id_residente = e.id_residente 
+                          AND a.id_preceptor = e.id_preceptor
+        -- Busca a menor data de início dos procedimentos para cada atendimento
+        INNER JOIN (
+            SELECT id_atendimento, MIN(data_hora_inicio) AS primeiro_procedimento
+            FROM PROCEDIMENTO_REALIZADO
+            GROUP BY id_atendimento
+        ) pr ON a.id_atendimento = pr.id_atendimento
+        GROUP BY u.id_unidade, u.nome;
+END;
+$$;
