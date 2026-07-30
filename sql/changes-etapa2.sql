@@ -47,7 +47,7 @@ ALTER TABLE Procedimento_Realizado
 ADD COLUMN data_hora_inicio TIMESTAMP; -- Criação da coluna para registrar o horário de início do procedimento.
 
 UPDATE Procedimento_Realizado pr 
-SET data_hora_inicio = -- Calcula o horário de início do procedimento com base no horário do atendimento associado, adicionando 15 minutos.
+SET data_hora_inicio = -- Calcula o horário de início do procedimento com base no horário do atendimento associado e um tempo adicional específico para cada tipo de procedimento.
     a.data_hora + 
      CASE pr.id_procedimento -- Define o tempo adicional com base no tipo de procedimento.
         WHEN 1 THEN INTERVAL '10 minutes'  -- Coleta de sangue (rápido)
@@ -95,23 +95,15 @@ WHERE medias.id_procedimento = p.id_procedimento;
 CREATE TABLE Auditoria_Atendimento ( -- Criação da tabela de auditoria para registrar operações realizadas na tabela Atendimento.
 
     id_auditoria SERIAL PRIMARY KEY,
-    id_atendimento INT,
+    id_atendimento INT, --Permite manter o histórico de operações mesmo que o atendimento seja excluído.
     operacao VARCHAR(10) NOT NULL, -- Tipo de operação realizada (INSERT, UPDATE, DELETE).
     usuario VARCHAR(100) NOT NULL, --Nome do usuário que realizou a operação.
     data_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, --Registra a data e hora da operação, com valor padrão sendo o timestamp atual.
     dados_antigos JSONB, -- Armazena os dados antigos do atendimento antes da operação (em formato JSON).
     dados_novos JSONB, -- Armazena os dados novos do atendimento após a operação (em formato JSON).
-    FOREIGN KEY (id_atendimento)
-        REFERENCES Atendimento(id_atendimento)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL, -- Se o atendimento for deletado, o id_atendimento na auditoria será definido como NULL, preservando o registro da operação.
 
     CHECK (
-        operacao IN (
-            'INSERT',
-            'UPDATE',
-            'DELETE'
-        )
+        operacao IN ('INSERT','UPDATE','DELETE')
     )
 
 );
@@ -186,6 +178,7 @@ VALUES
 
 -- Dados de teste para a tabela Auditoria_Atendimento:
 
+/*
 INSERT INTO Auditoria_Atendimento (
     id_atendimento,
     operacao,
@@ -194,12 +187,14 @@ INSERT INTO Auditoria_Atendimento (
     dados_novos
 )
 VALUES 
-    (1, 'INSERT', 'jenni', NULL, '{"id_atendimento": 1, "duracao_minutos": 30}'::jsonb),
-    (2, 'UPDATE', 'jenni', '{"duracao_minutos": 45}'::jsonb, '{"duracao_minutos": 50}'::jsonb),
-    (3, 'DELETE', 'jenni', '{"id_atendimento": 3}'::jsonb, NULL);
+  (1, 'INSERT', 'jenni', NULL, '{"id_atendimento": 1, "duracao_minutos": 30}'::jsonb),
+  (2, 'UPDATE', 'jenni', '{"duracao_minutos": 45}'::jsonb, '{"duracao_minutos": 50}'::jsonb),
+  (3, 'DELETE', 'jenni', '{"id_atendimento": 3}'::jsonb, NULL);
 
--- Verificar dados inseridos na tabela Internacao:
+Verificar dados inseridos na tabela Internacao:
 SELECT * FROM Internacao;
 
--- Verificar dados inseridos na tabela Auditoria_Atendimento:
+ Verificar dados inseridos na tabela Auditoria_Atendimento:
 SELECT * FROM Auditoria_Atendimento;
+
+*/
