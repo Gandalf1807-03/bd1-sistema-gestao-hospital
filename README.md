@@ -172,7 +172,7 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | **Tabela Auditoria_Atendimento** | Histórico de operações (INSERT/UPDATE/DELETE) com JSONB |
 | **Tabela Internacao** | Controle de internações com entrada/saída de pacientes |
 
-### Views (`triggers_views_etapa2.sql`)
+### Views (`viewS.sql`)
 
 | View | Descrição |
 |------|-----------|
