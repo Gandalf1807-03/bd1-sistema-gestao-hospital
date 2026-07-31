@@ -57,6 +57,7 @@ BEGIN
         -- Caso contrário:
         EXCEPTION
             WHEN OTHERS THEN
+                RAISE NOTICE 'Ocorreu uma falha ao registrar o atendimento. Cancelando e revertendo as alterações...';
                 RAISE;
     END;
 END;
