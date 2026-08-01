@@ -14,6 +14,8 @@ Sistema acadêmico de gestão hospitalar desenvolvido para o Hospital Universit�
 - [Etapa 2 — Funcionalidades Avançadas](#etapa-2--funcionalidades-avançadas) 
 - [Instalação e Configuração](#instalação-e-configuração)
 - [Como Executar](#como-executar)
+- [Chamada das Stored Procedures](#chamada-das-stored-procedures)
+- [Resetar o banco do zero](#resetar-o-banco-do-zero)
 - [Dados de Teste](#dados-de-teste)
 
 ---
@@ -51,6 +53,11 @@ O sistema gerencia o fluxo hospitalar completo:
 ```
 bd1-sistema-gestao-hospital/
 ├── sql/
+│   ├── call_procedures/           — exemplos de uso das stored procedures
+│   │   ├── sp_registrar_atendimento_completo.sql
+│   │   ├── sp_calcular_tempo_medio_espera.sql
+│   │   └── sp_reajustar_escala.sql
+│   │
 │   ├── create_tables.sql          — criação de todas as tabelas com constraints
 │   ├── inserts.sql                — dados de teste
 │   ├── crud.sql                   — operações CRUD em SQL puro
@@ -172,7 +179,15 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | **Tabela Auditoria_Atendimento** | Histórico de operações (INSERT/UPDATE/DELETE) com JSONB |
 | **Tabela Internacao** | Controle de internações com entrada/saída de pacientes |
 
-### Views (`viewS.sql`)
+### Stored Procedures (`procedures.sql`) 
+
+| Stored Procedure | Descrição |
+|------------------|-----------|
+| `sp_registrar_atendimento_completo` | Registra um novo atendimento e seus procedimentos realizados |
+| `sp_calcular_tempo_medio_espera` | Calcula o tempo médio de espera para um determinado período |
+| `sp_reajustar_escala` | Reajusta a escala de plantão com base em critérios definidos |
+
+### Views (`views.sql`)
 
 | View | Descrição |
 |------|-----------|
@@ -180,15 +195,13 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | `vw_residentes_sem_supervisor` | Residentes cujo preceptor não tem titulação de Doutor |
 | `vw_estatisticas_atendimentos_mensal` | Agregação por mês/unidade: total, média, procedimentos mais comuns |
 
-### Triggers
+### Triggers (`triggers.sql`)
 
 | Trigger | Descrição |
 |---------|-----------|
 | `trg_check_sobreposicao_escala` | Impede mesmo residente em duas unidades no mesmo dia/turno |
 | `trg_audita_atendimento` | Registra todas as operações na tabela de auditoria |
 | `trg_atualiza_media_procedimentos` | Mantém a média real dos procedimentos atualizada |
-
-### Stored Procedures (em desenvolvimento) 
 
 ### ORM (em desenvolvimento) 
 
@@ -282,6 +295,23 @@ Para rodar qualquer comando dentro dos arquivos crud.sql ou consultas.sql de for
 O resultado formatado em colunas abrirá instantaneamente na aba da direita (PostgreSQL Results).
 
 ---
+
+## Chamada das Stored Procedures
+
+**1. `sp_registrar_atendimento_completo`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_registrar_atendimento_completo.sql
+```
+
+**2. `sp_calcular_tempo_medio_espera`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_calcular_tempo_medio_espera.sql
+```
+
+**3. `sp_reajustar_escala`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_reajustar_escala.sql
+```
 
 ## Resetar o banco do zero
 
