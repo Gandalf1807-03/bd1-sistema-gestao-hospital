@@ -10,4 +10,4 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
-engine = create_engine("postgresql://luis:edu91814115@localhost/hospital", echo = True)
+engine = create_engine("postgresql://postgres:123@localhost/hospital", echo = True)
