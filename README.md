@@ -187,7 +187,7 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | `sp_calcular_tempo_medio_espera` | Calcula o tempo médio de espera para um determinado período |
 | `sp_reajustar_escala` | Reajusta a escala de plantão com base em critérios definidos |
 
-### Views (`triggers_views_etapa2.sql`)
+### Views (`views.sql`)
 
 | View | Descrição |
 |------|-----------|
@@ -195,7 +195,7 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | `vw_residentes_sem_supervisor` | Residentes cujo preceptor não tem titulação de Doutor |
 | `vw_estatisticas_atendimentos_mensal` | Agregação por mês/unidade: total, média, procedimentos mais comuns |
 
-### Triggers
+### Triggers (`triggers.sql`)
 
 | Trigger | Descrição |
 |---------|-----------|
