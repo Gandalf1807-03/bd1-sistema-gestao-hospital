@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import sessionmaker
 
 """
 [Explicação] - Todas as classes/tabelas vão herdar des-
@@ -11,3 +12,7 @@ class Base(DeclarativeBase):
     pass
 
 engine = create_engine("postgresql://postgres:123@localhost/hospital", echo = True)
+
+def get_session():
+    Session = sessionmaker(bind=engine)
+    return Session()
