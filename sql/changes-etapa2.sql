@@ -130,7 +130,6 @@ CREATE TABLE Internacao (
         REFERENCES Atendimento(id_atendimento)
         ON UPDATE CASCADE -- Se o atendimento for atualizado, a internação refletirá a mudança.
         ON DELETE RESTRICT, -- Impede a exclusão de um atendimento se houver uma internação associada.
-
     CHECK (data_hora_saida IS NULL OR data_hora_saida >= data_hora_entrada) -- Garante que a data de saída seja nula ou posterior à data de entrada.
 );
 
