@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import datetime
 from sqlalchemy import text
 from database import engine, get_session
 from pathlib import Path
@@ -36,18 +37,22 @@ with aba_atendimento:
 
         col1, col2 = st.columns(2)
         with col1:
-            id_paciente = st.number_input("ID Paciente", min_value=1)
-            id_residente = st.number_input("ID Residente", min_value=1)
-            id_preceptor = st.number_input("ID Preceptor", min_value=1)
+            id_paciente = st.number_input("ID Paciente", min_value=1, value=1)
+            id_residente = st.number_input("ID Residente", min_value=1, value=15)
+            id_preceptor = st.number_input("ID Preceptor", min_value=1, value=6)
         with col2:
-            data_hora = st.datetime_input("Chegada do paciente")
-            id_unidade = st.number_input("ID Unidade", min_value=1)
-            duracao_minutos = st.number_input("Duração (min)", min_value=1)
+            data_hora = st.datetime_input("Chegada do paciente", value=datetime.datetime(2026, 5, 13, 5, 15, 0))
+            id_unidade = st.number_input("ID Unidade", min_value=1, value=2)
+            duracao_minutos = st.number_input("Duração (min)", min_value=1, value=30)
         
         st.subheader("Procedimentos Realizados")
 
         # st.data_editor permite que o usuário adicione linhas dinamicamente no front-end!
-        df_procedimentos = pd.DataFrame(columns=["id_procedimento", "quantidade", "tempo_real_minutos", "observacao", "is_faturado", "data_hora_inicio"])
+        dados_iniciais = [
+            {"id_procedimento": 2, "quantidade": 1, "tempo_real_minutos": 10, "observacao": "ok", "is_faturado": True, "data_hora_inicio": datetime.datetime(2026, 5, 20, 14, 30, 1)},
+            {"id_procedimento": 3, "quantidade": 2, "tempo_real_minutos": 20, "observacao": "demorado", "is_faturado": False, "data_hora_inicio": datetime.datetime(2026, 5, 22, 10, 45, 14)}
+        ]
+        df_procedimentos = pd.DataFrame(dados_iniciais)
         procedimentos_editados = st.data_editor(
             df_procedimentos,
             num_rows="dynamic",
@@ -168,17 +173,17 @@ with aba_escala:
     st.markdown("Muda todas as escalas de um dia/turno para outro, validando conflitos.")
     
     with st.form("form_reajuste"):
-        id_residente = st.number_input("ID do Residente", min_value=1, step=1)
-        id_nova_unidade = st.number_input("ID da Nova Unidade", min_value=1)
+        id_residente = st.number_input("ID do Residente", min_value=1, step=1, value=14)
+        id_nova_unidade = st.number_input("ID da Nova Unidade", min_value=1, value=1)
         col_atual, col_novo = st.columns(2)
         
         with col_atual:
-            dia_antigo = st.selectbox("Dia Atual", ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA"])
-            turno_antigo = st.selectbox("Turno Atual", ["MANHA", "TARDE", "NOITE"])
+            dia_antigo = st.selectbox("Dia Atual", ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA"], index=1)
+            turno_antigo = st.selectbox("Turno Atual", ["MANHA", "TARDE", "NOITE"], index=2)
             
         with col_novo:
-            dia_novo = st.selectbox("Novo Dia", ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA"])
-            turno_novo = st.selectbox("Novo Turno", ["MANHA", "TARDE", "NOITE"])
+            dia_novo = st.selectbox("Novo Dia", ["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA"], index=3)
+            turno_novo = st.selectbox("Novo Turno", ["MANHA", "TARDE", "NOITE"], index=0)
             
         btn_reajuste = st.form_submit_button("Executar Reajuste")
         
