@@ -223,8 +223,8 @@ if __name__ == "__main__":
             pacientes_dados = [
                 (1, "CONV-001", "A+"),
                 (2, "CONV-002", "O-"),
-                (3, "CONV-003", None),   # não sabe o grupo sanguíneo
-                (4, None, "AB+"),         # não tem convênio
+                (3, "CONV-003", None),   
+                (4, None, "AB+"),        
                 (5, "CONV-005", "O+"),
             ]
             for id_pessoa, convenio, grupo in pacientes_dados:
@@ -396,8 +396,8 @@ if __name__ == "__main__":
             # INTERNACAO (Etapa 2)
             #==========================
             internacoes_dados = [
-                (1, 8, datetime(2026, 5, 8, 10, 30), datetime(2026, 5, 12, 9, 0)),   # já teve alta
-                (2, 9, datetime(2026, 5, 9, 13, 40), None),                          # ainda internado
+                (1, 8, datetime(2026, 5, 8, 10, 30), datetime(2026, 5, 12, 9, 0)),   
+                (2, 9, datetime(2026, 5, 9, 13, 40), None),                         
             ]
             for id_internacao, id_atendimento, entrada, saida in internacoes_dados:
                 inserir_internacao(session, id_internacao, id_atendimento, entrada, saida)
