@@ -56,9 +56,9 @@ def preceptores_acima_de_5_atendimentos(session: Session, mes: int, ano: int):
 # 3: Para cada unidade, plantões escalados por residente no mês corrente
 #===============================================================================
 # A versão SQL usa generate_series + CTEs para contar quantas vezes cada dia da
-# semana ocorre no mês corrente. Isso é lógica bem específica do PostgreSQL, então
-# aqui resolvemos a parte de "quantos dias de cada tipo há no mês" em Python com
-# a biblioteca padrão `calendar`, e deixamos só o JOIN/GROUP BY para o ORM.
+# semana ocorre no mês corrente.
+# Aqui resolvemos em Python com a biblioteca padrão `calendar`,
+# e deixamos só o JOIN/GROUP BY para o ORM.
 def plantoes_por_unidade_residente_mes_corrente(session: Session):
     import calendar
     from datetime import date
@@ -85,7 +85,6 @@ def plantoes_por_unidade_residente_mes_corrente(session: Session):
     )
     linhas = session.execute(stmt).all()
 
-    # agrega em Python usando o dicionário de ocorrências calculado acima
     resultado = {}
     for unidade, residente, dia_semana in linhas:
         chave = (unidade, residente)
@@ -101,7 +100,6 @@ def plantoes_por_unidade_residente_mes_corrente(session: Session):
 # 4: Pacientes que nunca realizaram nenhum procedimento de nível de risco 'ALTO'
 #===============================================================================
 def pacientes_sem_procedimento_alto_risco(session: Session):
-    # equivalente ao NOT EXISTS do SQL puro
     subquery = (
         select(1)
         .select_from(md.Atendimento)
