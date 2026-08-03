@@ -22,5 +22,4 @@ Utilize o **menu lateral esquerdo** para navegar entre os módulos do sistema:
 * **`Operações Avançadas`:** Reajustar escalas e registrar atendimentos (Procedures).
 * **`Validações`:** Testar as regras de negócio e bloqueios do banco (Triggers).
 * **`Relatórios`:** Visualizar painéis de internação e estatísticas (Views).
-* **`Cadastros`:** Inserir pacientes, profissionais e atendimentos via ORM.
 """)
