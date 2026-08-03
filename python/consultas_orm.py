@@ -4,8 +4,8 @@ Consultas analíticas via ORM - tradução de consultas.sql (Etapa 1) para SQLAl
 
 import models as md
 
-from sqlalchemy import select, func, extract, exists, and_
-from sqlalchemy.orm import Session
+from sqlalchemy import select, func, extract, exists, and_, case
+from sqlalchemy.orm import Session, aliased
 from database import engine
 
 
@@ -123,6 +123,114 @@ def pacientes_sem_procedimento_alto_risco(session: Session):
     return session.execute(stmt).scalars().all()
 
 
+#===============================================================================
+# 5: Preceptores que supervisionaram residentes que atenderam pacientes flamenguistas
+#===============================================================================
+def preceptores_de_flamenguistas(session: Session):
+    pessoa_paciente = aliased(md.Pessoa)
+
+    stmt = (
+        select(md.Pessoa.nome.label("nome_preceptor"))
+        .distinct()
+        .join(md.Preceptor, md.Preceptor.id_pessoa == md.Pessoa.id_pessoa)
+        .join(md.Atendimento, md.Atendimento.id_preceptor == md.Preceptor.id_pessoa)
+        .join(md.Paciente, md.Paciente.id_pessoa == md.Atendimento.id_paciente)
+        .join(pessoa_paciente, pessoa_paciente.id_pessoa == md.Paciente.id_pessoa)
+        .where(pessoa_paciente.is_flamengo.is_(True))
+    )
+    return session.execute(stmt).scalars().all()
+
+
+#===============================================================================
+# 6: Último atendimento de cada paciente (data_hora, residente, preceptor, procedimentos)
+#===============================================================================
+def ultimo_atendimento_por_paciente(session: Session):
+    ultima_data_subq = (
+        select(
+            md.Atendimento.id_paciente,
+            func.max(md.Atendimento.data_hora).label("ultima_data"),
+        )
+        .group_by(md.Atendimento.id_paciente)
+        .subquery()
+    )
+
+    pessoa_residente = aliased(md.Pessoa)
+    pessoa_preceptor = aliased(md.Pessoa)
+
+    stmt = (
+        select(
+            md.Atendimento.id_atendimento,
+            md.Pessoa.nome.label("nome_paciente"),
+            md.Atendimento.data_hora,
+            pessoa_residente.nome.label("nome_residente"),
+            pessoa_preceptor.nome.label("nome_preceptor"),
+        )
+        .join(md.Paciente, md.Paciente.id_pessoa == md.Pessoa.id_pessoa)
+        .join(md.Atendimento, md.Atendimento.id_paciente == md.Paciente.id_pessoa)
+        .join(
+            ultima_data_subq,
+            (ultima_data_subq.c.id_paciente == md.Atendimento.id_paciente)
+            & (ultima_data_subq.c.ultima_data == md.Atendimento.data_hora),
+        )
+        .join(md.Residente, md.Residente.id_pessoa == md.Atendimento.id_residente)
+        .join(pessoa_residente, pessoa_residente.id_pessoa == md.Residente.id_pessoa)
+        .join(md.Preceptor, md.Preceptor.id_pessoa == md.Atendimento.id_preceptor)
+        .join(pessoa_preceptor, pessoa_preceptor.id_pessoa == md.Preceptor.id_pessoa)
+        .order_by(md.Pessoa.nome)
+    )
+    linhas = session.execute(stmt).all()
+
+    resultado = []
+    for id_atendimento, nome_paciente, data_hora, nome_residente, nome_preceptor in linhas:
+        procs_stmt = (
+            select(md.Procedimento.nome)
+            .join(
+                md.Procedimento_Realizado,
+                md.Procedimento_Realizado.id_procedimento == md.Procedimento.id_procedimento,
+            )
+            .where(md.Procedimento_Realizado.id_atendimento == id_atendimento)
+        )
+        procedimentos = session.execute(procs_stmt).scalars().all()
+        resultado.append(
+            (nome_paciente, data_hora, nome_residente, nome_preceptor, procedimentos)
+        )
+    return resultado
+
+
+#===============================================================================
+# 7: Percentual de procedimentos de alto risco realizados por cada residente
+#===============================================================================
+def percentual_alto_risco_por_residente(session: Session):
+    stmt = (
+        select(
+            md.Residente.id_pessoa.label("id_residente"),
+            md.Pessoa.nome.label("nome_residente"),
+            func.sum(md.Procedimento_Realizado.quantidade).label("total"),
+            func.sum(
+                case(
+                    (md.Procedimento.nivel_risco == "ALTO", md.Procedimento_Realizado.quantidade),
+                    else_=0,
+                )
+            ).label("total_alto_risco"),
+        )
+        .join(md.Profissional, md.Residente.id_pessoa == md.Profissional.id_pessoa)
+        .join(md.Pessoa, md.Profissional.id_pessoa == md.Pessoa.id_pessoa)
+        .join(md.Atendimento, md.Atendimento.id_residente == md.Residente.id_pessoa)
+        .join(
+            md.Procedimento_Realizado,
+            md.Procedimento_Realizado.id_atendimento == md.Atendimento.id_atendimento,
+        )
+        .join(md.Procedimento, md.Procedimento.id_procedimento == md.Procedimento_Realizado.id_procedimento)
+        .group_by(md.Residente.id_pessoa, md.Pessoa.nome)
+    )
+
+    resultado = []
+    for id_residente, nome, total, total_alto_risco in session.execute(stmt).all():
+        percentual = round(total_alto_risco / total * 100, 2) if total else 0.0
+        resultado.append((id_residente, nome, total, total_alto_risco, percentual))
+    return resultado
+
+
 #=======================
 # DEMONSTRAÇÃO
 #=======================
@@ -143,3 +251,18 @@ if __name__ == "__main__":
         print("\n--- 4) Pacientes sem procedimento de alto risco ---")
         for nome in pacientes_sem_procedimento_alto_risco(session):
             print(nome)
+
+        print("\n--- 5) Preceptores de pacientes flamenguistas ---")
+        for nome in preceptores_de_flamenguistas(session):
+            print(nome)
+
+        print("\n--- 6) Último atendimento por paciente ---")
+        for paciente, data_hora, residente, preceptor, procedimentos in ultimo_atendimento_por_paciente(session):
+            print(
+                f"{paciente} | {data_hora} | residente: {residente} | "
+                f"preceptor: {preceptor} | procedimentos: {', '.join(procedimentos) or '(nenhum)'}"
+            )
+
+        print("\n--- 7) Percentual de alto risco por residente ---")
+        for id_res, nome, total, total_alto_risco, percentual in percentual_alto_risco_por_residente(session):
+            print(f"{nome}: {percentual}% ({total_alto_risco}/{total})")

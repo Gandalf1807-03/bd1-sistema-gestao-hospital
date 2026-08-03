@@ -59,7 +59,7 @@ bd1-sistema-gestao-hospital/
 │   ├── models.py                  — mapeamento objeto-relacional (classes SQLAlchemy) + relationships
 │   ├── insert.py                  — inserção dos dados de teste via ORM
 │   ├── crud_orm.py                — CRUD via ORM (tradução de crud.sql)
-│   ├── consultas_orm.py           — consultas analíticas via ORM (tradução de consultas.sql)
+│   ├── consultas_orm.py           — consultas analíticas via ORM (tradução de consultas.sql + consultas avançadas da Etapa 2)
 │   └── demo_lazy_eager.py         — demonstração de lazy loading vs eager loading
 │
 ├── sql/
@@ -225,6 +225,7 @@ Camada de acesso a dados reimplementada com SQLAlchemy, cobrindo as mesmas opera
 - [x] Inserção dos dados de teste via ORM (`insert.py`)
 - [x] CRUD via ORM (`crud_orm.py`)
 - [x] Consultas analíticas via ORM (`consultas_orm.py`)
+- [x] Consultas avançadas com ORM (`consultas_orm.py`)
 - [x] Demonstração de sessões/transações, DSL de consultas e lazy vs eager loading (`demo_lazy_eager.py`)
 
 | Arquivo | Descrição |
@@ -233,8 +234,16 @@ Camada de acesso a dados reimplementada com SQLAlchemy, cobrindo as mesmas opera
 | `models.py` | Classes mapeadas + relacionamentos entre elas |
 | `insert.py` | Popula o banco com os dados de teste via ORM |
 | `crud_orm.py` | As 6 operações de CRUD da Etapa 1, via ORM |
-| `consultas_orm.py` | As 4 consultas analíticas da Etapa 1, via ORM |
+| `consultas_orm.py` | As 4 consultas analíticas da Etapa 1 + as 3 consultas avançadas da Etapa 2, via ORM |
 | `demo_lazy_eager.py` | Compara lazy loading (`SELECT` sob demanda) com eager loading (`joinedload`/`selectinload`) |
+
+#### Consultas avançadas com ORM (`consultas_orm.py`, item 5 da Etapa 2)
+
+| Consulta | Descrição |
+|----------|-----------|
+| Preceptores de pacientes flamenguistas | Preceptores que supervisionaram residentes em atendimentos a pacientes com `is_flamengo = TRUE` |
+| Último atendimento por paciente | Para cada paciente: data/hora, residente, preceptor e procedimentos do atendimento mais recente |
+| Percentual de alto risco por residente | Percentual de procedimentos de nível `ALTO` realizados por cada residente |
 
 ## Instalação e Configuração (SQL puro)
 
@@ -371,11 +380,11 @@ python crud_orm.py
 ```
 Executa as 6 operações de `crud.sql` traduzidas para SQLAlchemy e desfaz (`rollback`) as alterações de teste ao final.
 
-**5. Rodar as consultas analíticas via ORM**
+**5. Rodar as consultas via ORM**
 ```bash
 python consultas_orm.py
 ```
-Executa as 4 consultas de `consultas.sql` traduzidas para SQLAlchemy (somente leitura).
+Executa as 4 consultas de `consultas.sql` traduzidas para SQLAlchemy, mais as 3 consultas avançadas da Etapa 2 (preceptores de pacientes flamenguistas, último atendimento por paciente, percentual de procedimentos de alto risco por residente) — todas somente leitura.
 
 **6. Rodar a demonstração de lazy vs eager loading**
 ```bash
