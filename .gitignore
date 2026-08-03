@@ -1,4 +1,8 @@
-.venv/
-venv/
-
 python/__pycache__/
+· GITIGNORE
+.venv/
+.env
+venv/
+__pycache__/
+*.pyc
+ 

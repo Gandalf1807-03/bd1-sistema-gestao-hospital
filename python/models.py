@@ -12,7 +12,7 @@ from sqlalchemy import (
     CheckConstraint,
     UniqueConstraint,
 )
-from sqlalchemy.orm import declarative_base, Mapped, mapped_column
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from database import Base, engine
 
@@ -32,6 +32,16 @@ class Pessoa(Base):
     is_flamengo     : Mapped[bool] = mapped_column(Boolean, 
                                                    default=False)
 
+    #============================================================
+    #Relationships (Etapa 2 - necessário p/ demonstrar lazy/eager loading)
+    #============================================================
+    telefones : Mapped[list["Pessoa_Telefone"]] = relationship(
+        back_populates="pessoa", lazy="select"  # lazy: só busca telefones quando acessado
+    )
+    #Ligação 1-para-1 com o "papel" que essa pessoa ocupa (pode não existir nenhum dos dois)
+    paciente : Mapped["Paciente"] = relationship(back_populates="pessoa", uselist=False)
+    profissional : Mapped["Profissional"] = relationship(back_populates="pessoa", uselist=False)
+
 
 class Pessoa_Telefone(Base):
     __tablename__ = "pessoa_telefones"
@@ -41,6 +51,8 @@ class Pessoa_Telefone(Base):
     
     telefone : Mapped[str] = mapped_column(String(20), 
                                            primary_key=True)
+
+    pessoa : Mapped["Pessoa"] = relationship(back_populates="telefones")
 
 
 class Paciente(Base):
@@ -60,6 +72,11 @@ class Paciente(Base):
         ),
     )
 
+    pessoa    : Mapped["Pessoa"] = relationship(back_populates="paciente")
+    alergias  : Mapped[list["Paciente_Alergia"]] = relationship(back_populates="paciente")
+    #Todos os atendimentos desse paciente (útil pro CRUD #2 e p/ demonstrar lazy loading)
+    atendimentos : Mapped[list["Atendimento"]] = relationship(back_populates="paciente")
+
 
 class Paciente_Alergia(Base):
     __tablename__ = "paciente_alergias"
@@ -68,6 +85,8 @@ class Paciente_Alergia(Base):
                                             primary_key=True)
     alergia   : Mapped[str] = mapped_column(Text, 
                                             primary_key=True)
+
+    paciente : Mapped["Paciente"] = relationship(back_populates="alergias")
 
 
 class Profissional(Base):
@@ -83,6 +102,10 @@ class Profissional(Base):
     especialidade  : Mapped[str] = mapped_column(String(100), 
                                                  nullable=False)
 
+    pessoa     : Mapped["Pessoa"] = relationship(back_populates="profissional")
+    residente  : Mapped["Residente"] = relationship(back_populates="profissional", uselist=False)
+    preceptor  : Mapped["Preceptor"] = relationship(back_populates="profissional", uselist=False)
+
 
 class Residente(Base):
     __tablename__ = "residente"
@@ -94,6 +117,13 @@ class Residente(Base):
 
     __table_args__ = (
         CheckConstraint("ano_residencia IN ('R1','R2','R3')", name="check_ano_residencia"),
+    )
+
+    profissional : Mapped["Profissional"] = relationship(back_populates="residente")
+    escalas      : Mapped[list["Escala"]] = relationship(back_populates="residente")
+    #eager por padrão (joinedload) -> pensado p/ comparar com o "atendimentos" do Preceptor, que fica lazy
+    atendimentos : Mapped[list["Atendimento"]] = relationship(
+        back_populates="residente", lazy="joined"
     )
 
 
@@ -111,6 +141,10 @@ class Preceptor(Base):
             name="check_titulacao",
         ),
     )
+
+    profissional : Mapped["Profissional"] = relationship(back_populates="preceptor")
+    escalas      : Mapped[list["Escala"]] = relationship(back_populates="preceptor")
+    atendimentos : Mapped[list["Atendimento"]] = relationship(back_populates="preceptor")
 
 
 class Unidade(Base):
@@ -131,6 +165,9 @@ class Unidade(Base):
         ),
         CheckConstraint("capacidade_leitos >= 0", name="check_capacidade_leitos"),
     )
+
+    escalas       : Mapped[list["Escala"]] = relationship(back_populates="unidade")
+    atendimentos  : Mapped[list["Atendimento"]] = relationship(back_populates="unidade")
 
 
 class Escala(Base):
@@ -160,6 +197,10 @@ class Escala(Base):
         CheckConstraint("turno IN ('MANHA','TARDE','NOITE')", name="check_turno"),
     )
 
+    unidade   : Mapped["Unidade"] = relationship(back_populates="escalas")
+    residente : Mapped["Residente"] = relationship(back_populates="escalas")
+    preceptor : Mapped["Preceptor"] = relationship(back_populates="escalas")
+
 
 class Atendimento(Base):
     __tablename__ = "atendimento"
@@ -182,6 +223,16 @@ class Atendimento(Base):
 
     __table_args__ = (
         CheckConstraint("duracao_minutos > 0", name="check_duracao_minutos"),
+    )
+
+    paciente   : Mapped["Paciente"] = relationship(back_populates="atendimentos")
+    residente  : Mapped["Residente"] = relationship(back_populates="atendimentos")
+    preceptor  : Mapped["Preceptor"] = relationship(back_populates="atendimentos")
+    unidade    : Mapped["Unidade"] = relationship(back_populates="atendimentos")
+    internacao : Mapped["Internacao"] = relationship(back_populates="atendimento", uselist=False)
+    #Procedimentos feitos nesse atendimento (join com Procedimento via Procedimento_Realizado)
+    procedimentos_realizados : Mapped[list["Procedimento_Realizado"]] = relationship(
+        back_populates="atendimento"
     )
 
 
@@ -207,6 +258,8 @@ class Procedimento(Base):
         CheckConstraint("tempo_medio_minutos > 0", name="check_tempo_medio_minutos"),
         CheckConstraint("nivel_risco IN ('BAIXO','MEDIO','ALTO')", name="check_nivel_risco"),
     )
+
+    realizacoes : Mapped[list["Procedimento_Realizado"]] = relationship(back_populates="procedimento")
 
 
 class Procedimento_Realizado(Base):
@@ -234,6 +287,9 @@ class Procedimento_Realizado(Base):
         CheckConstraint("quantidade > 0", name="check_quantidade"),
         CheckConstraint("tempo_real_minutos > 0", name="check_tempo_real_minutos"),
     )
+
+    atendimento  : Mapped["Atendimento"] = relationship(back_populates="procedimentos_realizados")
+    procedimento : Mapped["Procedimento"] = relationship(back_populates="realizacoes")
 
 
 #============================================================
@@ -281,5 +337,8 @@ class Internacao(Base):
             name="check_data_hora_saida",
         ),
     )
+
+    atendimento : Mapped["Atendimento"] = relationship(back_populates="internacao")
+
 
 Base.metadata.create_all(engine)

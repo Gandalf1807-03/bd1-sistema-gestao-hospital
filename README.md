@@ -12,8 +12,9 @@ Sistema acadêmico de gestão hospitalar desenvolvido para o Hospital Universit�
 - [Modelo de Dados](#modelo-de-dados)
 - [Etapa 1 — Fundamentos](#etapa-1--fundamentos)
 - [Etapa 2 — Funcionalidades Avançadas](#etapa-2--funcionalidades-avançadas) 
-- [Instalação e Configuração](#instalação-e-configuração)
-- [Como Executar](#como-executar)
+- [Instalação e Configuração (SQL puro)](#instalação-e-configuração-sql-puro)
+- [Como Executar (SQL puro)](#como-executar-sql-puro)
+- [Instalação e Execução via ORM (Python)](#instalação-e-execução-via-orm-python)
 - [Chamada das Stored Procedures](#chamada-das-stored-procedures)
 - [Resetar o banco do zero](#resetar-o-banco-do-zero)
 - [Dados de Teste](#dados-de-teste)
@@ -35,6 +36,7 @@ O sistema gerencia o fluxo hospitalar completo:
 - Triggers para validação e auditoria
 - Views para análises gerenciais
 - Stored Procedures para operações complexas
+- Camada de acesso a dados via ORM (SQLAlchemy), em paralelo ao SQL puro da Etapa 1
 
 ---
 
@@ -44,7 +46,7 @@ O sistema gerencia o fluxo hospitalar completo:
 |--------|-----------|
 | Banco de Dados | PostgreSQL 15+ |
 | Etapa 1 | SQL puro |
-| Etapa 2 | SQL avançado (Triggers, Views, Stored Procedures, JSONB) |
+| Etapa 2 | SQL avançado (Triggers, Views, Stored Procedures, JSONB) + ORM (Python/SQLAlchemy) |
 
 ---
 
@@ -52,6 +54,14 @@ O sistema gerencia o fluxo hospitalar completo:
 
 ```
 bd1-sistema-gestao-hospital/
+├── python/
+│   ├── database.py                — configura a conexão com o banco (lê credenciais do .env)
+│   ├── models.py                  — mapeamento objeto-relacional (classes SQLAlchemy) + relationships
+│   ├── insert.py                  — inserção dos dados de teste via ORM
+│   ├── crud_orm.py                — CRUD via ORM (tradução de crud.sql)
+│   ├── consultas_orm.py           — consultas analíticas via ORM (tradução de consultas.sql + consultas avançadas da Etapa 2)
+│   └── demo_lazy_eager.py         — demonstração de lazy loading vs eager loading
+│
 ├── sql/
 │   ├── call_procedures/           — exemplos de uso das stored procedures
 │   │   ├── sp_registrar_atendimento_completo.sql
@@ -66,6 +76,9 @@ bd1-sistema-gestao-hospital/
 │   ├── triggers.sql               — triggers
 │   ├── views.sql                  — views
 │   └── procedures.sql             — stored procedures
+│
+├── .env.example                   — modelo das variáveis de ambiente (sem segredos reais)
+├── requirements.txt                — dependências Python do projeto
 └── README.md
 ```
 
@@ -203,9 +216,36 @@ AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
 | `trg_audita_atendimento` | Registra todas as operações na tabela de auditoria |
 | `trg_atualiza_media_procedimentos` | Mantém a média real dos procedimentos atualizada |
 
-### ORM (em desenvolvimento) 
+### ORM (`python/`)
 
-## Instalação e Configuração
+Camada de acesso a dados reimplementada com SQLAlchemy, cobrindo as mesmas operações da Etapa 1 (sem SQL cru), mais a demonstração de lazy vs eager loading exigida pela Etapa 2.
+
+- [x] Mapeamento objeto-relacional (`models.py`, com `relationship()` entre todas as entidades)
+- [x] Criação das tabelas via ORM (`Base.metadata.create_all`)
+- [x] Inserção dos dados de teste via ORM (`insert.py`)
+- [x] CRUD via ORM (`crud_orm.py`)
+- [x] Consultas analíticas via ORM (`consultas_orm.py`)
+- [x] Consultas avançadas com ORM (`consultas_orm.py`)
+- [x] Demonstração de sessões/transações, DSL de consultas e lazy vs eager loading (`demo_lazy_eager.py`)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `database.py` | Cria a `engine` do SQLAlchemy lendo usuário/senha/host/banco do `.env` |
+| `models.py` | Classes mapeadas + relacionamentos entre elas |
+| `insert.py` | Popula o banco com os dados de teste via ORM |
+| `crud_orm.py` | As 6 operações de CRUD da Etapa 1, via ORM |
+| `consultas_orm.py` | As 4 consultas analíticas da Etapa 1 + as 3 consultas avançadas da Etapa 2, via ORM |
+| `demo_lazy_eager.py` | Compara lazy loading (`SELECT` sob demanda) com eager loading (`joinedload`/`selectinload`) |
+
+#### Consultas avançadas com ORM (`consultas_orm.py`, item 5 da Etapa 2)
+
+| Consulta | Descrição |
+|----------|-----------|
+| Preceptores de pacientes flamenguistas | Preceptores que supervisionaram residentes em atendimentos a pacientes com `is_flamengo = TRUE` |
+| Último atendimento por paciente | Para cada paciente: data/hora, residente, preceptor e procedimentos do atendimento mais recente |
+| Percentual de alto risco por residente | Percentual de procedimentos de nível `ALTO` realizados por cada residente |
+
+## Instalação e Configuração (SQL puro)
 
 ### Pré-requisitos
 
@@ -226,7 +266,7 @@ ALTER USER postgres PASSWORD '123';
 ```
 ---
 
-## Como Executar
+## Como Executar (SQL puro)
 
 **1. Ligar o PostgreSQL**
 ```bash
@@ -293,6 +333,64 @@ Para rodar qualquer comando dentro dos arquivos crud.sql ou consultas.sql de for
 3. Pressione as teclas Ctrl + Shift + E no seu teclado.
 
 O resultado formatado em colunas abrirá instantaneamente na aba da direita (PostgreSQL Results).
+
+---
+
+## Instalação e Execução via ORM (Python)
+
+Esta seção assume que o banco `hospital` já existe e que as tabelas/colunas da Etapa 1 e 2 já foram criadas (seções anteriores). Funciona tanto no Windows quanto no Linux/Mac — cada pessoa usa o Postgres já instalado na própria máquina.
+
+**1. Instalar as dependências Python**
+
+Na raiz do projeto:
+```bash
+pip install -r requirements.txt
+```
+
+**2. Configurar as credenciais do banco**
+
+Copie o arquivo de exemplo e preencha com seu próprio usuário/senha do PostgreSQL local:
+```bash
+copy .env.example .env      # Windows (PowerShell/cmd)
+cp .env.example .env        # Linux/Mac
+```
+
+Edite o `.env` gerado:
+```
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+DB_HOST=localhost
+DB_NAME=hospital
+```
+
+O `.env` é local de cada pessoa e nunca é versionado (está no `.gitignore`).
+
+**3. Conferir o mapeamento das tabelas**
+
+```bash
+cd python
+python models.py
+```
+
+Isso cria, via ORM, qualquer tabela que ainda não exista no banco (não altera tabelas já existentes — colunas novas continuam dependendo do `changes-etapa2.sql` em SQL puro).
+
+**4. Rodar o CRUD via ORM**
+```bash
+python crud_orm.py
+```
+Executa as 6 operações de `crud.sql` traduzidas para SQLAlchemy e desfaz (`rollback`) as alterações de teste ao final.
+
+**5. Rodar as consultas via ORM**
+```bash
+python consultas_orm.py
+```
+Executa as 4 consultas de `consultas.sql` traduzidas para SQLAlchemy, mais as 3 consultas avançadas da Etapa 2 (preceptores de pacientes flamenguistas, último atendimento por paciente, percentual de procedimentos de alto risco por residente) — todas somente leitura.
+
+**6. Rodar a demonstração de lazy vs eager loading**
+```bash
+python demo_lazy_eager.py
+```
+Mostra, comparando os `SELECT`s gerados, a diferença entre carregar um relacionamento sob demanda (lazy) e carregá-lo já junto da consulta principal (eager, via `joinedload`/`selectinload`).
 
 ---
 

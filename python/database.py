@@ -1,17 +1,20 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import sessionmaker
 
-"""
-[Explicação] - Todas as classes/tabelas vão herdar des-
-               sa Base. É ela quem sabe "quais classes
-               existem" quando for na hora de gerar o 
-               CREATE TABLE.
-"""
+load_dotenv()
+
 class Base(DeclarativeBase):
     pass
 
-engine = create_engine("postgresql://postgres:123@localhost/hospital", echo = True)
+usuario = os.getenv("DB_USER")
+senha = os.getenv("DB_PASSWORD")
+host = os.getenv("DB_HOST")
+banco = os.getenv("DB_NAME")
+
+engine = create_engine(f"postgresql://{usuario}:{senha}@{host}/{banco}", echo=True)
 
 def get_session():
     Session = sessionmaker(bind=engine)

@@ -131,18 +131,17 @@ INSERT INTO Procedimento_Realizado (id_atendimento, id_procedimento, quantidade,
     (10, 1, 1, 12, NULL,                                    FALSE);
 
 
--- Reseta os dados, mas não apaga nenhuma tabela
--- TRUNCATE TABLE
---     Pessoa,
---     Pessoa_Telefones,
---     Paciente,
---     Paciente_Alergias,
---     Profissional,
---     Preceptor,
---     Residente,
---     Unidade,
---     Escala,
---     Atendimento,
---     Procedimento,
---     Procedimento_Realizado
--- RESTART IDENTITY CASCADE;
+TRUNCATE TABLE
+    Pessoa,
+    Pessoa_Telefones,
+    Paciente,
+    Paciente_Alergias,
+    Profissional,
+    Preceptor,
+    Residente,
+    Unidade,
+    Escala,
+    Atendimento,
+    Procedimento,
+    Procedimento_Realizado
+RESTART IDENTITY CASCADE;
