@@ -130,7 +130,6 @@ INSERT INTO Procedimento_Realizado (id_atendimento, id_procedimento, quantidade,
     (9,  5, 1, 65, 'Intercorrencia: queda de saturacao',    FALSE),
     (10, 1, 1, 12, NULL,                                    FALSE);
 
-
 -- Reseta os dados, mas não apaga nenhuma tabela
 -- TRUNCATE TABLE
 --     Pessoa,

@@ -11,8 +11,12 @@ Sistema acadêmico de gestão hospitalar desenvolvido para o Hospital Universit�
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Modelo de Dados](#modelo-de-dados)
 - [Etapa 1 — Fundamentos](#etapa-1--fundamentos)
-- [Instalação e Configuração](#instalação-e-configuração)
-- [Como Executar](#como-executar)
+- [Etapa 2 — Funcionalidades Avançadas](#etapa-2--funcionalidades-avançadas) 
+- [Instalação e Configuração (SQL puro)](#instalação-e-configuração-sql-puro)
+- [Como Executar (SQL puro)](#como-executar-sql-puro)
+- [Instalação e Execução via ORM (Python)](#instalação-e-execução-via-orm-python)
+- [Chamada das Stored Procedures](#chamada-das-stored-procedures)
+- [Resetar o banco do zero](#resetar-o-banco-do-zero)
 - [Dados de Teste](#dados-de-teste)
 
 ---
@@ -26,6 +30,13 @@ O sistema gerencia o fluxo hospitalar completo:
 - Registro de atendimentos com vínculo entre paciente, residente e preceptor
 - Procedimentos realizados por atendimento, com métricas de tempo
 - Escalas de plantão por unidade, dia e turno
+- Auditoria de operações na tabela Atendimento
+- Controle de internações com entrada/saída de pacientes
+- Média real de tempo dos procedimentos
+- Triggers para validação e auditoria
+- Views para análises gerenciais
+- Stored Procedures para operações complexas
+- Camada de acesso a dados via ORM (SQLAlchemy), em paralelo ao SQL puro da Etapa 1
 
 ---
 
@@ -35,6 +46,7 @@ O sistema gerencia o fluxo hospitalar completo:
 |--------|-----------|
 | Banco de Dados | PostgreSQL 15+ |
 | Etapa 1 | SQL puro |
+| Etapa 2 | SQL avançado (Triggers, Views, Stored Procedures, JSONB) + ORM (Python/SQLAlchemy) + Front-end (Streamlit) |
 
 ---
 
@@ -42,11 +54,48 @@ O sistema gerencia o fluxo hospitalar completo:
 
 ```
 bd1-sistema-gestao-hospital/
+├── python/
+│   ├── .env.example               — modelo das variáveis de ambiente
+│   ├── database.py                — configura a conexão com o banco (lê credenciais do .env)
+│   ├── models.py                  — mapeamento objeto-relacional (classes SQLAlchemy) + relationships
+│   ├── insert.py                  — inserção dos dados de teste via ORM
+│   ├── crud_orm.py                — CRUD via ORM (tradução de crud.sql)
+│   ├── consultas_orm.py           — consultas analíticas via ORM (tradução de consultas.sql + consultas avançadas da Etapa 2)
+│   ├── demo_lazy_eager.py         — demonstração de lazy loading vs eager loading
+│   ├── simulacaoOP.py             — simulação de concorrência via ORM
+│   ├── Página_Inicial.py          — front-end Streamlit (página inicial)
+│   │
+│   ├── call_procedures/           — exemplos de uso das stored procedures adaptados para uso com Streamlit
+│   │   ├── sp_registrar_atendimento_completo.sql
+│   │   ├── sp_calcular_tempo_medio_espera.sql
+│   │   └── sp_reajustar_escala.sql
+│   │
+│   └── pages/                     — páginas do front-end Streamlit
+│       ├── 1_Visualizar_Tabelas.py             — visualização de tabelas do banco
+│       ├── 2_Operações_(Stored_Procedures).py  — execução das stored procedures
+│       ├── 3_Validações_(Triggers).py          — demonstração das triggers
+│       ├── 4_Relatórios_(Views).py             — visualização das views
+│       ├── 5_Consultas_Analíticas_(ORM).py     — execução das consultas analíticas
+│       ├── 6_CRUD_(ORM).py                     — execução das operações CRUD via ORM
+│       ├── 7_Lazy_vs_Eager_Loading_(ORM).py    — demonstração de lazy vs eager loading
+│       └── 8_Teste_de_Concorrência.py          — simulação de concorrência via ORM
+│    
 ├── sql/
-│   ├── create_tables.sql   — criação de todas as tabelas com constraints
-│   ├── inserts.sql         — dados de teste
-│   ├── crud.sql            — operações CRUD em SQL puro
-│   └── consultas.sql       — consultas analíticas
+│   ├── call_procedures/           — exemplos de uso das stored procedures usando SQL puro
+│   │   ├── sp_registrar_atendimento_completo.sql
+│   │   ├── sp_calcular_tempo_medio_espera.sql
+│   │   └── sp_reajustar_escala.sql
+│   │
+│   ├── create_tables.sql          — criação de todas as tabelas com constraints
+│   ├── inserts.sql                — dados de teste
+│   ├── crud.sql                   — operações CRUD em SQL puro
+│   ├── consultas.sql              — consultas analíticas
+│   ├── changes-etapa2.sql         — alterações estruturais para Etapa 2
+│   ├── triggers.sql               — triggers
+│   ├── views.sql                  — views
+│   └── procedures.sql             — stored procedures
+│
+├── requirements.txt                — dependências Python do projeto
 └── README.md
 ```
 
@@ -87,18 +136,30 @@ UNIDADE                 (id_unidade PK, nome, tipo, capacidade_leitos)
 ATENDIMENTO             (id_atendimento PK, data_hora, duracao_minutos,
                          id_paciente FK → PACIENTE,
                          id_residente FK → RESIDENTE,
-                         id_preceptor FK → PRECEPTOR)
+                         id_preceptor FK → PRECEPTOR,
+                         id_unidade FK → UNIDADE)
 
 PROCEDIMENTO            (id_procedimento PK, codigo UNIQUE, nome,
-                         tempo_medio_minutos, nivel_risco)
+                         tempo_medio_minutos, nivel_risco,
+                         media_tempo_procedimento)
 
 PROCEDIMENTO_REALIZADO  (id_atendimento FK, id_procedimento FK,
                          quantidade, tempo_real_minutos, observacao,
-                         is_faturado, PK(id_atendimento, id_procedimento))
+                         is_faturado, PK(id_atendimento, id_procedimento),
+                         data_hora_inicio)
 
 ESCALA                  (id_escala PK, id_unidade FK, dia_semana, turno,
                          id_residente FK, id_preceptor FK,
                          UNIQUE(id_unidade, dia_semana, turno, id_residente))
+
+INTERNACAO               (id_internacao PK, id_atendimento FK UNIQUE,
+                        data_hora_entrada, data_hora_saida,
+                        CHECK (saida >= entrada))
+
+AUDITORIA_ATENDIMENTO   (id_auditoria PK, id_atendimento FK,
+                        operacao, usuario, data_hora,
+                        dados_antigos JSONB, dados_novos JSONB)
+
 ```
 
 ---
@@ -136,8 +197,72 @@ ESCALA                  (id_escala PK, id_unidade FK, dia_semana, turno,
 | Pacientes sem risco ALTO | Nunca realizaram procedimento de nível ALTO |
 
 ---
+## 🆕 Etapa 2 — Funcionalidades Avançadas
 
-## Instalação e Configuração
+### Alterações Estruturais (`changes-etapa2.sql`)
+
+| Alteração | Descrição |
+|-----------|-----------|
+| **id_unidade** no Atendimento | Relaciona atendimento à unidade onde ocorreu |
+| **data_hora_inicio** no Procedimento_Realizado | Registra início do procedimento com tempos personalizados por tipo |
+| **media_tempo_procedimento** no Procedimento | Média real de tempo calculada a partir dos atendimentos |
+| **Tabela Auditoria_Atendimento** | Histórico de operações (INSERT/UPDATE/DELETE) com JSONB |
+| **Tabela Internacao** | Controle de internações com entrada/saída de pacientes |
+
+### Stored Procedures (`procedures.sql`) 
+
+| Stored Procedure | Descrição |
+|------------------|-----------|
+| `sp_registrar_atendimento_completo` | Registra um novo atendimento e seus procedimentos realizados |
+| `sp_calcular_tempo_medio_espera` | Calcula o tempo médio de espera para um determinado período |
+| `sp_reajustar_escala` | Reajusta a escala de plantão com base em critérios definidos |
+
+### Views (`views.sql`)
+
+| View | Descrição |
+|------|-----------|
+| `vw_pacientes_internados` | Pacientes atualmente internados (data_hora_saida IS NULL) |
+| `vw_residentes_sem_supervisor` | Residentes cujo preceptor não tem titulação de Doutor |
+| `vw_estatisticas_atendimentos_mensal` | Agregação por mês/unidade: total, média, procedimentos mais comuns |
+
+### Triggers (`triggers.sql`)
+
+| Trigger | Descrição |
+|---------|-----------|
+| `trg_check_sobreposicao_escala` | Impede mesmo residente em duas unidades no mesmo dia/turno |
+| `trg_audita_atendimento` | Registra todas as operações na tabela de auditoria |
+| `trg_atualiza_media_procedimentos` | Mantém a média real dos procedimentos atualizada |
+
+### ORM (`python/`)
+
+Camada de acesso a dados reimplementada com SQLAlchemy, cobrindo as mesmas operações da Etapa 1 (sem SQL cru), mais a demonstração de lazy vs eager loading exigida pela Etapa 2.
+
+- [x] Mapeamento objeto-relacional (`models.py`, com `relationship()` entre todas as entidades)
+- [x] Criação das tabelas via ORM (`Base.metadata.create_all`)
+- [x] Inserção dos dados de teste via ORM (`insert.py`)
+- [x] CRUD via ORM (`crud_orm.py`)
+- [x] Consultas analíticas via ORM (`consultas_orm.py`)
+- [x] Consultas avançadas com ORM (`consultas_orm.py`)
+- [x] Demonstração de sessões/transações, DSL de consultas e lazy vs eager loading (`demo_lazy_eager.py`)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `database.py` | Cria a `engine` do SQLAlchemy lendo usuário/senha/host/banco do `.env` |
+| `models.py` | Classes mapeadas + relacionamentos entre elas |
+| `insert.py` | Popula o banco com os dados de teste via ORM |
+| `crud_orm.py` | As 6 operações de CRUD da Etapa 1, via ORM |
+| `consultas_orm.py` | As 4 consultas analíticas da Etapa 1 + as 3 consultas avançadas da Etapa 2, via ORM |
+| `demo_lazy_eager.py` | Compara lazy loading (`SELECT` sob demanda) com eager loading (`joinedload`/`selectinload`) |
+
+#### Consultas avançadas com ORM (`consultas_orm.py`, item 5 da Etapa 2)
+
+| Consulta | Descrição |
+|----------|-----------|
+| Preceptores de pacientes flamenguistas | Preceptores que supervisionaram residentes em atendimentos a pacientes com `is_flamengo = TRUE` |
+| Último atendimento por paciente | Para cada paciente: data/hora, residente, preceptor e procedimentos do atendimento mais recente |
+| Percentual de alto risco por residente | Percentual de procedimentos de nível `ALTO` realizados por cada residente |
+
+## Instalação e Configuração (SQL puro)
 
 ### Pré-requisitos
 
@@ -158,7 +283,7 @@ ALTER USER postgres PASSWORD '123';
 ```
 ---
 
-## Como Executar
+## Como Executar (SQL puro)
 
 **1. Ligar o PostgreSQL**
 ```bash
@@ -192,12 +317,29 @@ sudo -u postgres psql -d hospital -f create_tables.sql
 sudo -u postgres psql -d hospital -f inserts.sql
 ```
 
-**7. Verificar se tudo foi criado**
+**7. Aplicar alterações estruturais**
+```bash
+sudo -u postgres psql -d hospital -f changes-etapa2.sql
+```
+**8. Criar triggers**
+```bash
+sudo -u postgres psql -d hospital -f triggers.sql
+```
+**9. Criar views**
+```bash
+sudo -u postgres psql -d hospital -f views.sql
+```
+**10. Criar stored procedures**
+```bash
+sudo -u postgres psql -d hospital -f procedures.sql
+```
+
+**11. Verificar se tudo foi criado**
 ```bash
 sudo -u postgres psql -d hospital -c "\dt"
 ```
 
-**8. Executar as consultas analíticas e operações CRUD pelo VS Code**
+**12. Executar as consultas analíticas e operações CRUD pelo VS Code**
 
 Para rodar qualquer comando dentro dos arquivos crud.sql ou consultas.sql de forma visual:
 
@@ -211,6 +353,138 @@ O resultado formatado em colunas abrirá instantaneamente na aba da direita (Pos
 
 ---
 
+## Chamada das Stored Procedures
+
+**1. `sp_registrar_atendimento_completo`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_registrar_atendimento_completo.sql
+```
+
+**2. `sp_calcular_tempo_medio_espera`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_calcular_tempo_medio_espera.sql
+```
+
+**3. `sp_reajustar_escala`**
+```bash
+sudo -u postgres psql -d hospital -f call_procedures/sp_reajustar_escala.sql
+```
+
+---
+
+## Instalação e Execução via ORM (Python)
+
+Esta seção assume que o banco `hospital` já existe e que as tabelas/colunas da Etapa 1 e 2 já foram criadas (seções anteriores). Funciona tanto no Windows quanto no Linux/Mac — cada pessoa usa o Postgres já instalado na própria máquina.
+
+**1. Instalar as dependências Python**
+
+Na raiz do projeto:
+```bash
+pip install -r requirements.txt
+```
+
+**2. Configurar as credenciais do banco**
+
+Copie o arquivo de exemplo e preencha com seu próprio usuário/senha do PostgreSQL local:
+```bash
+copy .env.example .env      # Windows (PowerShell/cmd)
+cp .env.example .env        # Linux/Mac
+```
+
+Edite o `.env` gerado:
+```
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+DB_HOST=localhost
+DB_NAME=hospital
+```
+
+O `.env` é local de cada pessoa e nunca é versionado (está no `.gitignore`).
+
+**3. Conferir o mapeamento das tabelas**
+
+```bash
+cd python
+python models.py
+```
+
+Isso cria, via ORM, qualquer tabela que ainda não exista no banco (não altera tabelas já existentes — colunas novas continuam dependendo do `changes-etapa2.sql` em SQL puro).
+
+**4. Rodar o CRUD via ORM**
+```bash
+python crud_orm.py
+```
+Executa as 6 operações de `crud.sql` traduzidas para SQLAlchemy e desfaz (`rollback`) as alterações de teste ao final.
+
+**5. Rodar as consultas via ORM**
+```bash
+python consultas_orm.py
+```
+Executa as 4 consultas de `consultas.sql` traduzidas para SQLAlchemy, mais as 3 consultas avançadas da Etapa 2 (preceptores de pacientes flamenguistas, último atendimento por paciente, percentual de procedimentos de alto risco por residente) — todas somente leitura.
+
+**6. Rodar a demonstração de lazy vs eager loading**
+```bash
+python demo_lazy_eager.py
+```
+Mostra, comparando os `SELECT`s gerados, a diferença entre carregar um relacionamento sob demanda (lazy) e carregá-lo já junto da consulta principal (eager, via `joinedload`/`selectinload`).
+
+---
+
+## Front-end (Streamlit)
+
+A parte do front-end foi desenvolvida usando Streamlit. A partir dele, foram adicionadas 9 interfaces para as operações solicitadas pelo projeto:
+
+- **Página Inicial:** contém as informações gerais do projeto, incluindo a equipe responsável e do que a página front-end é composta.
+
+1. **Visualizar Tabelas:** visualização dinâmica das tabelas existentes do banco de dados. Serve para facilitar a visualização dos dados que nelas estão contidos.
+
+2. **Operações (Stored Procedures):** contém 3 operações envolvendo as stored procedures, com dados personalizados e editáveis.
+
+3. **Validações (Triggers):** possui 3 operações para testar o funcionamento dos triggers que fazem parte da arquitetura do banco de dados.
+
+4. **Relatórios (Views):** nessa aba, são mostradas alguns scripts SQL que realizam a exibição das views definidas para o sistema. 
+
+Para a parte da ORM, foi realizada uma integração do código Python original com Streamlit, para permitir a visualização delas por meio do front-end:
+
+5. **Consultas Analíticas (ORM):** contém as consultas analíticas, definidas na etapa 1, reimplementadas usando a ORM SQLAlchemy.
+
+6. **CRUD (ORM):** esse arquivo possui as consultas básicas que compõem um CRUD definidas na etapa 1 e, também, reimplementadas com a ORM.
+
+7. **Lazy vs Eager Loading (ORM):** uma das demonstrações solicitadas pelo projeto envolvem a comparação entre o Lazy Loading e o Eager Loading. Assim, nessa aba, essa comparação pode ser vista pelo front-end, uma vez que a integração entre ORM e Streamlit foi feita.
+
+8. **Teste de Concorrência:** por fim, a simulação de concorrência também feita com ORM está sendo mostrada no front-end. Nele, é mostrado dois cenários em que esse caso pode ocorrer: o cenário otimista e o cenário pessimista.
+
+### Execução do front-end
+
+1. Instale as dependências do projeto (caso já não tenha feito).
+
+2. Clone o repositório do projeto para sua máquina local.
+```bash
+cd ~
+mkdir -p git
+cd ~/git
+git clone https://github.com/Gandalf1807-03/bd1-sistema-gestao-hospital.git
+```
+
+3. Coloque suas credenciais do PostgreSQL no arquivo `.env` (copie o `.env.example` e preencha com seu usuário/senha do PostgreSQL local).
+
+4. Inicie o servidor do PostgreSQL.
+```bash
+sudo service postgresql start
+```
+
+5. Navegue até a pasta do do arquivo.
+```bash
+cd ~/git/bd1-sistema-gestao-hospital/python
+```
+
+6. Execute o front-end do projeto com Streamlit.
+```bash
+streamlit run Página_Inicial.py
+```
+
+---
+
 ## Resetar o banco do zero
 
 Se precisar recriar tudo (ex: ao atualizar o schema):
@@ -221,6 +495,10 @@ sudo -u postgres psql -c "CREATE DATABASE hospital;"
 cd sql
 sudo -u postgres psql -d hospital -f create_tables.sql
 sudo -u postgres psql -d hospital -f inserts.sql
+sudo -u postgres psql -d hospital -f changes-etapa2.sql
+sudo -u postgres psql -d hospital -f triggers.sql
+sudo -u postgres psql -d hospital -f views.sql
+sudo -u postgres psql -d hospital -f procedures.sql
 ```
 
 ---
@@ -251,6 +529,11 @@ O `inserts.sql` popula o banco com:
 - `is_faturado = FALSE` no registro (atendimento 1, procedimento 1) — pode ser deletado no CRUD
 - `is_faturado = TRUE` no registro (atendimento 1, procedimento 2) — bloqueado contra deleção
 - Pacientes 1, 2 e 5 nunca realizaram procedimento de risco ALTO — retornam na consulta analítica
+- Atendimentos distribuídos entre as 4 unidades (Enfermaria, UTI, Pronto-Socorro, Ambulatório)
+- Horário de início dos procedimentos com tempos realistas por tipo
+- Média real de tempo calculada para cada procedimento
+- 3 internações registradas (2 pacientes internados, 1 com alta)
+- Dados de auditoria para testar histórico de operações
 
 ---
 
