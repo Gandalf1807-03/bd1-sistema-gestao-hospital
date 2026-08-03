@@ -47,7 +47,6 @@ with Session(engine) as session:
             
         with col2:
             st.markdown("**Passo 2: Acessar o paciente**")
-            # Só quando acessamos ".paciente" o SQLAlchemy dispara um SELECT novo.
             if atendimento:
                 paciente = atendimento.paciente
                 nome_paciente = paciente.pessoa.nome if paciente.pessoa else paciente.id_pessoa
@@ -118,7 +117,6 @@ residentes = stmt.all()
         st.success("✔️ Consultas executadas! (Olhe o terminal: Exatamente 2 SELECTs foram disparados, um para buscar os residentes e outro usando IN para buscar TODOS os atendimentos deles de uma vez).")
         
         if residentes:
-            # Formatando o resultado em um dataframe para ficar bonito na tela
             dados_residentes = [
                 {"ID Residente": r.id_pessoa, "Qtd de Atendimentos": len(r.atendimentos)} 
                 for r in residentes
