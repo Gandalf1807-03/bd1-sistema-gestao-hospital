@@ -16,7 +16,7 @@ from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from database import Base, engine
 
-#Base = declarative_base()
+
 
 class Pessoa(Base):
     __tablename__ = "pessoa"
@@ -32,13 +32,10 @@ class Pessoa(Base):
     is_flamengo     : Mapped[bool] = mapped_column(Boolean, 
                                                    default=False)
 
-    #============================================================
-    #Relationships (Etapa 2 - necessário p/ demonstrar lazy/eager loading)
-    #============================================================
     telefones : Mapped[list["Pessoa_Telefone"]] = relationship(
-        back_populates="pessoa", lazy="select"  # lazy: só busca telefones quando acessado
+        back_populates="pessoa", lazy="select"  
     )
-    #Ligação 1-para-1 com o "papel" que essa pessoa ocupa (pode não existir nenhum dos dois)
+    
     paciente : Mapped["Paciente"] = relationship(back_populates="pessoa", uselist=False)
     profissional : Mapped["Profissional"] = relationship(back_populates="pessoa", uselist=False)
 
@@ -74,7 +71,7 @@ class Paciente(Base):
 
     pessoa    : Mapped["Pessoa"] = relationship(back_populates="paciente")
     alergias  : Mapped[list["Paciente_Alergia"]] = relationship(back_populates="paciente")
-    #Todos os atendimentos desse paciente (útil pro CRUD #2 e p/ demonstrar lazy loading)
+
     atendimentos : Mapped[list["Atendimento"]] = relationship(back_populates="paciente")
 
 
@@ -121,7 +118,7 @@ class Residente(Base):
 
     profissional : Mapped["Profissional"] = relationship(back_populates="residente")
     escalas      : Mapped[list["Escala"]] = relationship(back_populates="residente")
-    #eager por padrão (joinedload) -> pensado p/ comparar com o "atendimentos" do Preceptor, que fica lazy
+   
     atendimentos : Mapped[list["Atendimento"]] = relationship(
         back_populates="residente", lazy="joined"
     )
@@ -230,7 +227,7 @@ class Atendimento(Base):
     preceptor  : Mapped["Preceptor"] = relationship(back_populates="atendimentos")
     unidade    : Mapped["Unidade"] = relationship(back_populates="atendimentos")
     internacao : Mapped["Internacao"] = relationship(back_populates="atendimento", uselist=False)
-    #Procedimentos feitos nesse atendimento (join com Procedimento via Procedimento_Realizado)
+    
     procedimentos_realizados : Mapped[list["Procedimento_Realizado"]] = relationship(
         back_populates="atendimento"
     )
