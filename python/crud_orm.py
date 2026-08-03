@@ -18,8 +18,7 @@ from database import engine
 #===============================================================================
 def inserir_atendimento_verificado(session: Session, data_hora, duracao_minutos,
                                     id_paciente, id_residente, id_preceptor, id_unidade):
-    # Em SQL puro isso seria feito com 3 SELECTs manuais antes do INSERT.
-    # No ORM, session.get(Classe, chave_primaria) já faz esse SELECT por PK.
+
     paciente = session.get(md.Paciente, id_paciente)
     residente = session.get(md.Residente, id_residente)
     preceptor = session.get(md.Preceptor, id_preceptor)
@@ -40,7 +39,7 @@ def inserir_atendimento_verificado(session: Session, data_hora, duracao_minutos,
         id_unidade=id_unidade,
     )
     session.add(atendimento)
-    session.flush()  # gera o id_atendimento sem precisar dar commit ainda
+    session.flush()  
     return atendimento
 
 
@@ -61,7 +60,7 @@ def listar_atendimentos_paciente(session: Session, id_paciente):
 #    (nome do procedimento, quantidade e tempo real)
 #===============================================================================
 def listar_procedimentos_do_atendimento(session: Session, id_atendimento):
-    # equivalente ao JOIN entre Procedimento e Procedimento_Realizado do SQL puro
+
     stmt = (
         select(md.Procedimento.nome, md.Procedimento_Realizado.quantidade,
                md.Procedimento_Realizado.tempo_real_minutos)
